@@ -76,8 +76,6 @@ end
 
 class Square
   INITIAL_MARKER = " "
-  HUMAN_MARKER = 'X'
-  COMPUTER_MARKER = 'O'
 
   attr_accessor :marker
 
@@ -99,10 +97,12 @@ class Square
 end
 
 class Player
-  attr_reader :marker, :score
+  attr_accessor :marker, :name
+  attr_reader :score
 
   def initialize(marker)
-    @marker = marker == :human ? Square::HUMAN_MARKER : Square::COMPUTER_MARKER
+    @marker = TTTGame::COMPUTER_MARKER if marker == :computer
+    @name = ''
     @score = 0
   end
 
@@ -113,8 +113,9 @@ end
 
 class TTTGame
   # Modify to 'player', 'computer', or 'choose'
-  FIRST_TO_MOVE = 'choose'
-  SCORE_TO_WIN = 3
+  FIRST_TO_MOVE = 'player'
+  SCORE_TO_WIN = 2
+  COMPUTER_MARKER = 'O'
 
   attr_reader :board, :human, :computer
 
@@ -128,6 +129,8 @@ class TTTGame
   def play
     clear
     display_welcome_message
+    set_names
+    set_player_marker
     main_game
     display_goodbye_message
   end
@@ -168,6 +171,45 @@ class TTTGame
     clear
   end
 
+  def prompt_player_marker
+    player_marker = nil
+    loop do
+      puts "Type any character to be your marker (must be one character only):"
+      player_marker = gets.chomp.downcase
+      break if player_marker.length == 1
+      puts "Sorry, you can only enter one character."
+    end
+    player_marker
+  end
+
+  def set_player_marker
+    human.marker = prompt_player_marker
+  end
+
+  def prompt_player_name
+    player_name = nil
+    loop do
+      puts "Enter your name:"
+      player_name = gets.chomp
+      break if !player_name.empty?
+      puts "Sorry, you must enter at least something..."
+    end
+    player_name
+  end
+
+  def set_player_name
+    human.name = prompt_player_name
+  end
+
+  def set_computer_name
+    computer.name = %w(R2D2 C-3PO Data Goddard WALL-E Optimus).sample
+  end
+
+  def set_names
+    set_player_name
+    set_computer_name
+  end
+
   def display_goodbye_message
     puts "Thanks for playing Tic Tac Toe! Goodbye."
   end
@@ -188,12 +230,11 @@ class TTTGame
 
   # rubocop:disable Layout/LineLength
   def display_board
-    puts "Your marker: '#{human.marker}'  |  Computer's marker: '#{computer.marker}'"
+    puts "#{human.name}'s marker: '#{human.marker}'  |  #{computer.name}'s marker: '#{computer.marker}'"
     puts ""
     board.draw
     puts ""
   end
-  # rubocop:enable Layout/LineLength
 
   def players_move
     loop do
@@ -233,18 +274,22 @@ class TTTGame
   def computer_moves
     choice = nil
 
+    # Offense
     Board::WINNING_LINES.each do |line|
-      choice = board.find_at_risk_square(line, Square::COMPUTER_MARKER)
+      choice = board.find_at_risk_square(line, computer.marker)
       break if choice
     end
 
+    # Defense
     Board::WINNING_LINES.each do |line|
-      choice = board.find_at_risk_square(line, Square::HUMAN_MARKER)
+      choice = board.find_at_risk_square(line, human.marker)
       break if choice
     end
 
+    # Choose square 5
     choice = 5 if board.unmarked_keys.include?(5)
 
+    # Random square
     choice = board.unmarked_keys.sample if !choice
 
     board[choice] = computer.marker
@@ -275,8 +320,8 @@ class TTTGame
     clear_screen_and_display_board
 
     case board.winning_marker
-    when human.marker then puts "You won!"
-    when computer.marker then puts "Computer won!"
+    when human.marker then puts "#{human.name} won!"
+    when computer.marker then puts "#{computer.name} won!"
     else puts "It's a tie!"
     end
     display_scores
@@ -284,7 +329,7 @@ class TTTGame
   # rubocop:enable Metrics/MethodLength
 
   def display_scores
-    puts "Your score: #{human.score}  |  Computer score: #{computer.score}"
+    puts "#{human.name}'s score: #{human.score}  |  #{computer.name}'s score: #{computer.score}"
   end
 
   def clear
@@ -297,11 +342,12 @@ class TTTGame
 
   def display_grand_winner
     if human.score > computer.score
-      puts "You are the grand winner with #{human.score} point(s)!"
+      puts "#{human.name} are the grand winner with #{human.score} point(s)!"
     else
-      puts "The computer is the grand winner with #{computer.score} point(s)!"
+      puts "#{computer.name} is the grand winner with #{computer.score} point(s)!"
     end
   end
+  # rubocop:enable Layout/LineLength
 
   def play_again?
     answer = nil
@@ -319,11 +365,6 @@ class TTTGame
     board.reset
     @current_player = @first_to_move
     clear
-  end
-
-  def display_play_again_message
-    puts "Let's play again!"
-    puts ''
   end
 end
 
